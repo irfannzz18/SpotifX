@@ -6,7 +6,7 @@
   "main": "desktop/main.cjs",
   "scripts": {
     "make:icon": "node desktop/scripts/create-icon.cjs",
-    "dist:win": "npm run make:icon && electron-builder --win nsis --x64"
+    "dist:win": "npm run make:icon && electron-builder --win nsis --x64 --publish never"
   },
   "devDependencies": {
     "electron": "37.2.6",
