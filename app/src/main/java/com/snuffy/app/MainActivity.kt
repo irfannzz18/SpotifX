@@ -42,6 +42,24 @@ class MainActivity : Activity() {
 
     private inner class NativeBridge {
         @JavascriptInterface
+        fun searchAudio(query: String) {
+            worker.execute {
+                try {
+                    val result = Python.getInstance().getModule("downloader")
+                        .callAttr("search_audio", query).toString()
+                    runOnUiThread {
+                        if (::web.isInitialized) web.evaluateJavascript("window.onSpotifXSearch && window.onSpotifXSearch($result)", null)
+                    }
+                } catch (error: Throwable) {
+                    val result = JSONObject().put("ok", false).put("error", error.message ?: "Search failed").toString()
+                    runOnUiThread {
+                        if (::web.isInitialized) web.evaluateJavascript("window.onSpotifXSearch && window.onSpotifXSearch($result)", null)
+                    }
+                }
+            }
+        }
+
+        @JavascriptInterface
         fun downloadAudio(url: String) {
             worker.execute {
                 try {
