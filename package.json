@@ -1,0 +1,45 @@
+{
+  "name": "spotifx-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SpotifX desktop music player",
+  "main": "desktop/main.cjs",
+  "scripts": {
+    "make:icon": "node desktop/scripts/create-icon.cjs",
+    "dist:win": "npm run make:icon && electron-builder --win nsis --x64"
+  },
+  "devDependencies": {
+    "electron": "37.2.6",
+    "electron-builder": "26.0.12",
+    "png-to-ico": "2.1.0",
+    "sharp": "0.34.3"
+  },
+  "build": {
+    "appId": "com.snuffy.spotifx",
+    "productName": "SpotifX",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "desktop/**/*",
+      "app/src/main/assets/index.html",
+      "package.json"
+    ],
+    "win": {
+      "icon": "desktop/assets/app-icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "SpotifX"
+    }
+  }
+}
