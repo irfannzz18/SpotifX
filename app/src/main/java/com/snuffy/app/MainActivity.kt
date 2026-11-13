@@ -9,6 +9,7 @@ import android.webkit.WebViewClient
 import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
 import org.json.JSONObject
+import org.json.JSONArray
 import java.io.File
 import java.util.concurrent.Executors
 
@@ -55,6 +56,17 @@ class MainActivity : Activity() {
         }
 
         @JavascriptInterface
+        fun listDownloaded(): String {
+            val directory = File(filesDir, "music")
+            val files = directory.listFiles()?.filter { it.isFile && it.length() > 0 }?.sortedByDescending { it.lastModified() } ?: emptyList()
+            val result = JSONArray()
+            files.forEach { file ->
+                result.put(JSONObject().put("fileName", file.name).put("title", file.name.substringBeforeLast('.')).put("size", file.length()))
+            }
+            return result.toString()
+        }
+
+        @JavascriptInterface
         fun playDownloaded(fileName: String) {
             runOnUiThread {
                 try {
@@ -79,7 +91,7 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun stopDownloaded() {
             runOnUiThread {
-                downloadedPlayer?.runCatching { stop() }
+                downloadedPlayer?.let { player -> runCatching { player.stop() } }
                 downloadedPlayer?.release()
                 downloadedPlayer = null
             }
