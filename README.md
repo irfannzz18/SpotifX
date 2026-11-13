@@ -1,41 +1,27 @@
 # SpotifX
 
-SpotifX is an Android music-player project with a Kotlin host app, an embedded HTML interface, local audio import, and a Python-powered audio download module.
+Android music-player project with a Kotlin host app, embedded HTML interface, local audio import, and Python-powered audio download support.
 
 ## Android stack
-
 - Kotlin Android activity and JavaScript bridge
 - Chaquopy 17.2.0 embedding Python 3.11
 - yt-dlp 2025.10.22 for supported audio-source extraction
-- Local audio storage under the app's private files directory
-- Native MediaPlayer playback for downloaded files
-- Existing WebView-based interface and offline file import
-- Custom SpotifX music-wave app symbol (not Electron branding)
+- Local private storage and native MediaPlayer playback for downloaded files
+- Existing WebView interface and custom SpotifX music-wave icon
 
-## Audio downloads and rights
+## Downloads and rights
+The downloader accepts YouTube and SoundCloud URLs and requests an audio-only stream. Use it only for material you own or are explicitly authorized to download, and follow each service's terms and applicable copyright law. Authentication, region restrictions, anti-bot checks, and upstream site changes may prevent downloads. yt-dlp cannot guarantee that every URL works.
 
-The downloader accepts YouTube and SoundCloud URLs and requests an audio-only stream. Use it only for material you own or are explicitly authorized to download, and follow the source service's terms and applicable copyright law. Site changes, authentication, region restrictions, or anti-bot checks can prevent a download. yt-dlp does not guarantee that every URL will work.
+The source audio format is retained. MP3 conversion is not included because it requires a separately packaged FFmpeg binary. Downloaded audio is saved in the app's private files directory.
 
-The downloader keeps the source audio format. It does not convert to MP3 because that would require a separately packaged FFmpeg binary. Downloaded audio is stored privately inside the app and can be played through the Kotlin native player.
+## Android build
+Minimum Android API 24 (Chaquopy requirement); compile/target SDK 35; Java/Kotlin 17; Python 3.11; ABIs arm64-v8a, armeabi-v7a, x86_64.
 
-## Android compatibility
+GitHub Actions installs Python 3.11 and Java 17 before running the Gradle build. Open Actions → Build Android APK. A successful run uploads the SpotifX-debug-apk artifact.
 
-- Minimum Android API: 24 (required by current Chaquopy)
-- Target/compile SDK: 35
-- ABIs: arm64-v8a, armeabi-v7a, x86_64
-- Java/Kotlin target: 17
-- Python: 3.11
-
-## Build
-
-Open Actions → Build Android APK. A successful run uploads the SpotifX-debug-apk artifact.
-
-Open Actions → Build Windows EXE for the Windows installer artifact SpotifX-Windows-EXE. The desktop wrapper reuses the HTML interface and the custom SpotifX icon.
+Open Actions → Build Windows EXE for the Windows installer artifact SpotifX-Windows-EXE.
 
 ## Recovery status
+This repository was recreated after the previous source contents were removed. It now includes the remembered Android/Kotlin/Chaquopy/yt-dlp architecture, offline download UI wiring, custom icon resource, and the current starter interface. It is not an exact restoration of every historical source file: the complete old source ZIP was not available in this workspace, and compiled APK code cannot be converted back into the exact original source project.
 
-This repository was recreated after the previous source repository contents were removed. It now contains the remembered Android/Kotlin/Chaquopy/yt-dlp architecture and the current starter interface. It is not an exact restoration of every file from the old project: the original full source ZIP and all historical files were not available in this workspace. The original APK's compiled code cannot be converted back into the exact original source project.
-
-## License
-
-Review yt-dlp, Chaquopy, and all bundled asset licenses before distributing builds. No third-party music is bundled.
+Review all dependency and asset licenses before distribution. No third-party music is bundled.
