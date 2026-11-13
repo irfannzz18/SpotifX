@@ -58,3 +58,30 @@ def download_audio(url, output_dir):
         "fileName": os.path.basename(file_path),
         "size": os.path.getsize(file_path),
     })
+
+
+def search_audio(query, limit=8):
+    query = (query or "").strip()
+    if not query:
+        raise ValueError("Enter a song or artist to search.")
+    options = {"quiet": True, "no_warnings": True, "skip_download": True, "extract_flat": True}
+    with YoutubeDL(options) as ydl:
+        result = ydl.extract_info("ytsearch%d:%s" % (max(1, min(int(limit), 10)), query), download=False)
+    entries = result.get("entries") or []
+    tracks = []
+    for item in entries:
+        if not item:
+            continue
+        video_id = item.get("id")
+        url = item.get("url") or item.get("webpage_url")
+        if video_id and (not url or not str(url).startswith("http")):
+            url = "https://www.youtube.com/watch?v=" + video_id
+        if not url:
+            continue
+        tracks.append({
+            "title": item.get("title") or "Untitled audio",
+            "url": url,
+            "duration": item.get("duration"),
+            "id": video_id,
+        })
+    return json.dumps({"ok": True, "tracks": tracks})
