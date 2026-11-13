@@ -19,6 +19,16 @@ nav button{background:transparent}.player{position:fixed;bottom:64px;left:12px;r
 <section class="section"><h2>Your music</h2><p class="muted" id="hint">Import audio files to build your offline library.</p><div id="tracks"></div></section>
 <section class="section"><h2>Offline Songs</h2><button id="shuffle">⇄ Shuffle offline songs</button></section>
 
+<section class="section" id="audio-search">
+  <h2>Search YouTube audio</h2>
+  <p class="muted">Search tracks, then save an audio-only copy when you have permission.</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <input id="audioQuery" type="search" placeholder="Song or artist" aria-label="Search songs" style="flex:1;min-width:180px;padding:12px;border-radius:12px;border:1px solid #444;background:#202020;color:#fff">
+    <button id="searchAudio" class="primary" type="button">Search</button>
+  </div>
+  <p class="muted" id="searchStatus" role="status" aria-live="polite"></p>
+  <div id="searchResults"></div>
+</section>
 <section class="section" id="audio-downloads">
   <h2>Save audio offline</h2>
   <p class="muted">Paste a YouTube or SoundCloud link for audio you own or are allowed to download.</p>
@@ -108,4 +118,46 @@ window.onSpotifXDownload = result => {
   downloadedTracks.prepend(row);
 };
 loadDownloadedTracks();
+
+const searchStatus = document.getElementById("searchStatus");
+const searchResults = document.getElementById("searchResults");
+const searchButton = document.getElementById("searchAudio");
+searchButton.addEventListener("click", () => {
+  const query = document.getElementById("audioQuery").value.trim();
+  if (!query) { searchStatus.textContent = "Enter a song or artist."; return; }
+  if (!window.SpotifX || typeof window.SpotifX.searchAudio !== "function") {
+    searchStatus.textContent = "Search is available in the Android app build."; return;
+  }
+  searchButton.disabled = true;
+  searchStatus.textContent = "Searching…";
+  searchResults.replaceChildren();
+  window.SpotifX.searchAudio(query);
+});
+window.onSpotifXSearch = result => {
+  searchButton.disabled = false;
+  searchResults.replaceChildren();
+  if (!result || !result.ok) { searchStatus.textContent = "Search failed: " + (result && result.error ? result.error : "Unknown error"); return; }
+  const tracks = result.tracks || [];
+  searchStatus.textContent = tracks.length ? tracks.length + " results" : "No results found.";
+  tracks.forEach(track => {
+    const row = document.createElement("div");
+    row.className = "track";
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    const title = document.createElement("strong");
+    title.textContent = track.title;
+    const sub = document.createElement("small");
+    sub.textContent = track.duration ? Math.floor(track.duration / 60) + ":" + String(track.duration % 60).padStart(2, "0") : "Audio search result";
+    meta.append(title, sub);
+    const save = document.createElement("button");
+    save.textContent = "Save offline";
+    save.addEventListener("click", () => {
+      downloadButton.disabled = true;
+      downloadStatus.textContent = "Downloading audio…";
+      window.SpotifX.downloadAudio(track.url);
+    });
+    row.append(meta, save);
+    searchResults.append(row);
+  });
+};
 </script></body></html>
