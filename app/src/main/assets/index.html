@@ -58,6 +58,31 @@ downloadButton.addEventListener("click", () => {
   downloadStatus.textContent = "Downloading audio… please keep the app open.";
   window.SpotifX.downloadAudio(url);
 });
+function loadDownloadedTracks() {
+  if (!window.SpotifX || typeof window.SpotifX.listDownloaded !== "function") return;
+  try {
+    const saved = JSON.parse(window.SpotifX.listDownloaded() || "[]");
+    downloadedTracks.replaceChildren();
+    saved.forEach(item => {
+      const row = document.createElement("div");
+      row.className = "track";
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      const title = document.createElement("strong");
+      title.textContent = item.title || item.fileName;
+      const sub = document.createElement("small");
+      sub.textContent = "Saved offline · " + Math.max(1, Math.round((item.size || 0) / 1048576 * 10) / 10) + " MB";
+      meta.append(title, sub);
+      const play = document.createElement("button");
+      play.textContent = "Play";
+      play.addEventListener("click", () => window.SpotifX.playDownloaded(item.fileName));
+      row.append(meta, play);
+      downloadedTracks.append(row);
+    });
+  } catch (error) {
+    downloadStatus.textContent = "Could not load saved downloads.";
+  }
+}
 window.onSpotifXDownload = result => {
   downloadButton.disabled = false;
   if (!result || !result.ok) {
@@ -82,4 +107,5 @@ window.onSpotifXDownload = result => {
   row.append(meta, play);
   downloadedTracks.prepend(row);
 };
+loadDownloadedTracks();
 </script></body></html>
