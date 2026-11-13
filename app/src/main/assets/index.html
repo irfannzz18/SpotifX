@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#101010"><title>SpotifX</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,-apple-system,sans-serif;background:#101010;color:#fff}
+*{box-sizing:border-box}body{margin:0;background:#101010}.app{padding:22px 18px 110px;max-width:720px;margin:auto}
+header{display:flex;align-items:center;justify-content:space-between;margin:8px 0 28px}
+h1{font-size:28px;margin:0;letter-spacing:-1px}.muted{color:#aaa}
+button{border:0;border-radius:24px;padding:12px 18px;background:#252525;color:#fff;font-weight:650}
+.primary{background:#1ed760;color:#07170c}.section{margin:26px 0}.track{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #292929}
+.art{width:52px;height:52px;border-radius:10px;background:#292929;object-fit:cover}.meta{flex:1;min-width:0}.meta strong,.meta small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.meta small{color:#aaa;margin-top:4px}
+nav{position:fixed;bottom:0;left:0;right:0;background:#171717;border-top:1px solid #303030;display:flex;justify-content:space-around;padding:14px}
+nav button{background:transparent}.player{position:fixed;bottom:64px;left:12px;right:12px;background:#242424;border-radius:14px;padding:12px;display:none}
+</style></head>
+<body><main class="app">
+<header><h1>SpotifX</h1><button id="import">＋ Import songs</button><input id="files" type="file" accept="audio/*" multiple hidden></header>
+<section class="section"><h2>Your music</h2><p class="muted" id="hint">Import audio files to build your offline library.</p><div id="tracks"></div></section>
+<section class="section"><h2>Offline Songs</h2><button id="shuffle">⇄ Shuffle offline songs</button></section>
+</main><div class="player" id="player"><strong id="now">Not playing</strong><audio id="audio" controls style="width:100%"></audio></div>
+<nav><button>Home</button><button>Albums</button><button>Liked</button></nav>
+<script>
+const dbName='spotifx-offline-v1';let db;
+const request=indexedDB.open(dbName,1);
+request.onupgradeneeded=()=>request.result.createObjectStore('songs',{keyPath:'id',autoIncrement:true});
+request.onsuccess=()=>{db=request.result;render()};
+const $=id=>document.getElementById(id);
+$('import').onclick=()=>$('files').click();
+$('files').onchange=async e=>{if(!db)return;for(const f of e.target.files){if(!f.type.startsWith('audio/'))continue;await new Promise((resolve,reject)=>{const tx=db.transaction('songs','readwrite');tx.objectStore('songs').add({name:f.name,type:f.type,blob:f});tx.oncomplete=resolve;tx.onerror=reject})}e.target.value='';render()};
+function all(){return new Promise(resolve=>{const tx=db.transaction('songs','readonly');const r=tx.objectStore('songs').getAll();r.onsuccess=()=>resolve(r.result||[])})}
+async function play(song){const url=URL.createObjectURL(song.blob);$('audio').src=url;$('now').textContent=song.name;$('player').style.display='block';try{await $('audio').play()}catch{}}
+async function render(){if(!db)return;const songs=await all();$('hint').textContent=songs.length?songs.length+' saved offline song(s)':'Import audio files to build your offline library.';$('tracks').replaceChildren();songs.forEach(s=>{const row=document.createElement('div');row.className='track';const meta=document.createElement('div');meta.className='meta';const title=document.createElement('strong');title.textContent=s.name;const sub=document.createElement('small');sub.textContent='Available offline';meta.append(title,sub);const playBtn=document.createElement('button');playBtn.textContent='Play';playBtn.onclick=()=>play(s);row.append(meta,playBtn);$('tracks').append(row)})}
+$('shuffle').onclick=async()=>{const songs=await all();if(!songs.length)return;play(songs[Math.floor(Math.random()*songs.length)])};
+</script></body></html>
