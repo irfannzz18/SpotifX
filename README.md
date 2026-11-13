@@ -1,27 +1,40 @@
-# SpotifX
+# Snuffy / SpotifX
 
-Android music-player project with a Kotlin host app, embedded HTML interface, local audio import, and Python-powered audio download support.
+A reconstructed music-player app project. The current build restores the previously shared 309-line HTML music-player interface from the conversation archive and hosts it in an Android WebView. It also includes the remembered native Android/Python audio-download architecture.
 
-## Android stack
-- Kotlin Android activity and JavaScript bridge
-- Chaquopy 17.2.0 embedding Python 3.11
-- yt-dlp 2025.10.22 for supported audio-source extraction
-- Local private storage and native MediaPlayer playback for downloaded files
-- Existing WebView interface and custom SpotifX music-wave icon
+## Project components
 
-## Downloads and rights
-The downloader accepts YouTube and SoundCloud URLs and requests an audio-only stream. Use it only for material you own or are explicitly authorized to download, and follow each service's terms and applicable copyright law. Authentication, region restrictions, anti-bot checks, and upstream site changes may prevent downloads. yt-dlp cannot guarantee that every URL works.
+- Android app: Kotlin activity, WebView host and JavaScript bridge.
+- Python runtime: Chaquopy with Python 3.11.
+- Audio extraction/search: yt-dlp, configured for audio-only streams.
+- Offline playback: downloaded tracks are stored in app-private storage and played through Android MediaPlayer.
+- Web player: recovered HTML interface with search, track cards, queue controls, shuffle, repeat, progress and volume controls, plus Jamendo catalog search.
+- App icon: custom music-wave symbol reconstructed from the launcher icon visible in the supplied APK.
+- Windows wrapper: Electron desktop shell reusing the HTML player and custom app icon.
 
-The source audio format is retained. MP3 conversion is not included because it requires a separately packaged FFmpeg binary. Downloaded audio is saved in the app's private files directory.
+## Build outputs
 
-## Android build
-Minimum Android API 24 (Chaquopy requirement); compile/target SDK 35; Java/Kotlin 17; Python 3.11; ABIs arm64-v8a, armeabi-v7a, x86_64.
+GitHub Actions:
+- **Build Android APK** creates the Android debug APK artifact.
+- **Build Windows EXE** creates the Windows installer artifact.
 
-GitHub Actions installs Python 3.11 and Java 17 before running the Gradle build. Open Actions → Build Android APK. A successful run uploads the SpotifX-debug-apk artifact.
+Open the repository's Actions tab and download the artifact from a successful run.
 
-Open Actions → Build Windows EXE for the Windows installer artifact SpotifX-Windows-EXE.
+## Audio and copyright
 
-## Recovery status
-This repository was recreated after the previous source contents were removed. It now includes the remembered Android/Kotlin/Chaquopy/yt-dlp architecture, offline download UI wiring, custom icon resource, and the current starter interface. It is not an exact restoration of every historical source file: the complete old source ZIP was not available in this workspace, and compiled APK code cannot be converted back into the exact original source project.
+The web catalog currently queries Jamendo. The native yt-dlp downloader accepts supported YouTube and SoundCloud URLs for audio-only extraction. Only download material you own or are authorized to save, and comply with each service's terms and applicable law. Site changes, authentication, regional restrictions or anti-bot measures can stop downloads.
 
-Review all dependency and asset licenses before distribution. No third-party music is bundled.
+No commercial music library is bundled. MP3 conversion is not included; the source audio format is retained, so playback compatibility depends on the downloaded format and the Android device.
+
+## Recovery and accuracy note
+
+This repository now contains the recovered prior HTML player file, reconstructed Kotlin/Chaquopy/yt-dlp integration, build workflows and custom logo resource. It is a substantial reconstruction, **not a byte-for-byte restoration of the original APK or every deleted source file**. A compiled APK does not preserve the original editable project structure. Some screens and integrations may still differ from the historical app and need comparison against screenshots or the original APK running on a device.
+
+## Toolchain
+
+- Android Gradle Plugin 8.7.3
+- Kotlin 2.0.21
+- Chaquopy 17.2.0
+- Python 3.11
+- yt-dlp 2025.10.22
+- Java 17
