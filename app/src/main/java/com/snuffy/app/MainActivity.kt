@@ -21,7 +21,6 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (!Python.isStarted()) Python.start(AndroidPlatform(this))
-
         web = WebView(this).apply {
             webViewClient = WebViewClient()
             settings.javaScriptEnabled = true
@@ -34,7 +33,7 @@ class MainActivity : Activity() {
         web.loadUrl("file:///android_asset/index.html")
     }
 
-    private fun sendDownloadResult(json: String) {
+    private fun sendResult(json: String) {
         runOnUiThread {
             if (::web.isInitialized) web.evaluateJavascript("window.onSpotifXDownload && window.onSpotifXDownload($json)", null)
         }
@@ -46,15 +45,11 @@ class MainActivity : Activity() {
             worker.execute {
                 try {
                     val outputDir = File(filesDir, "music").apply { mkdirs() }
-                    val module = Python.getInstance().getModule("downloader")
-                    val result = module.callAttr("download_audio", url, outputDir.absolutePath).toString()
-                    sendDownloadResult(result)
+                    val result = Python.getInstance().getModule("downloader")
+                        .callAttr("download_audio", url, outputDir.absolutePath).toString()
+                    sendResult(result)
                 } catch (error: Throwable) {
-                    val result = JSONObject()
-                        .put("ok", false)
-                        .put("error", error.message ?: "Download failed")
-                        .toString()
-                    sendDownloadResult(result)
+                    sendResult(JSONObject().put("ok", false).put("error", error.message ?: "Download failed").toString())
                 }
             }
         }
@@ -63,8 +58,7 @@ class MainActivity : Activity() {
         fun playDownloaded(fileName: String) {
             runOnUiThread {
                 try {
-                    val safeName = File(fileName).name
-                    val file = File(File(filesDir, "music"), safeName)
+                    val file = File(File(filesDir, "music"), File(fileName).name)
                     require(file.isFile && file.length() > 0) { "Downloaded audio file not found." }
                     downloadedPlayer?.release()
                     downloadedPlayer = MediaPlayer().apply {
@@ -77,7 +71,7 @@ class MainActivity : Activity() {
                         prepareAsync()
                     }
                 } catch (error: Throwable) {
-                    sendDownloadResult(JSONObject().put("ok", false).put("error", error.message ?: "Playback failed").toString())
+                    sendResult(JSONObject().put("ok", false).put("error", error.message ?: "Playback failed").toString())
                 }
             }
         }
