@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SpotifX</title>
+<style>
+:root{--bg:#000;--card:rgba(255,255,255,.035);--border:rgba(255,255,255,.05);--text:#e8e8ea;--muted:#7a7a85;--btn:rgba(255,255,255,.05);--nav:rgba(12,12,14,.9);--sheet:rgba(14,14,16,.97);--well:rgba(0,0,0,.4);--item:rgba(255,255,255,.03);--active:rgba(255,255,255,.14);--disc:#26262b}
+[data-theme=light]{--bg:#f2f2f4;--card:rgba(255,255,255,.7);--border:rgba(0,0,0,.06);--text:#1a1a1f;--muted:#6b6b75;--btn:rgba(255,255,255,.9);--nav:rgba(255,255,255,.92);--sheet:rgba(250,250,252,.98);--well:rgba(0,0,0,.05);--item:rgba(0,0,0,.03);--active:rgba(0,0,0,.09);--disc:#3a3a42}
+*{box-sizing:border-box;margin:0;padding:0;scrollbar-width:none!important;-ms-overflow-style:none!important}
+*::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}
+html,body{height:100%;background:var(--bg);color:var(--text)}
+body{font-family:system-ui,Roboto,Arial,sans-serif;overflow:hidden;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
+a{color:var(--text)}
+[hidden]{display:none!important}
+
+.app{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column}
+.screen{flex:1;overflow-y:auto;padding:34px 12px calc(96px + env(safe-area-inset-bottom))}
+
+.top{position:relative;position:relative;display:grid;grid-template-columns:44px 1fr 44px;align-items:center;padding:0 2px 12px}
+.brand{display:flex;align-items:center;justify-content:center;height:34px;overflow:hidden}
+.song-wave{display:none;align-items:center;justify-content:center;gap:3px;width:104px;height:30px;color:var(--text)}
+.song-wave.visible{display:flex}
+.song-wave span{display:block;width:3px;height:var(--h,8px);min-height:5px;border-radius:8px;background:currentColor;opacity:.9;transform:scaleY(.52);transform-origin:center;transition:height .22s ease,opacity .22s ease}
+.song-wave.is-playing span{animation:wave-pulse var(--speed,720ms) ease-in-out infinite alternate;animation-delay:var(--delay,0ms);opacity:1}
+.song-wave.is-loading span{animation:wave-pulse 360ms ease-in-out infinite alternate;animation-delay:var(--delay,0ms)}
+@keyframes wave-pulse{from{transform:scaleY(.28)}to{transform:scaleY(1)}}
+@media(prefers-reduced-motion:reduce){.song-wave span{animation:none!important;transform:scaleY(.65)}}
+.file-hit{position:absolute;top:0;right:56px;width:56px;height:40px;background:transparent;border:0;box-shadow:none;padding:0;border-radius:12px}
+.file-hit:active{transform:none;box-shadow:none}
+.muted{color:var(--muted);font-size:13px}
+h2{font-size:15px;font-weight:700;margin-bottom:10px}
+.head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 2px 12px}
+.page-title{font-size:20px;font-weight:800}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:24px;padding:14px;width:100%;
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:0 6px 14px rgba(0,0,0,.25)}
+.view{display:none;flex-direction:column;gap:12px}
+.view.active{display:flex}
+
+button{font:inherit;color:var(--text);background:var(--btn);border:1px solid var(--border);
+  border-radius:16px;padding:10px 14px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.25);
+  transition:transform .05s;outline:none;-webkit-user-select:none;user-select:none;text-decoration:none}
+button:active{box-shadow:inset 2px 3px 6px rgba(0,0,0,.4);transform:scale(.97)}
+button.on{background:var(--active);font-weight:700}
+button.round{width:46px;height:46px;border-radius:50%;padding:0;font-size:16px;display:inline-flex;align-items:center;justify-content:center}
+button.big{width:62px;height:62px;border-radius:50%;padding:0;font-size:20px;display:inline-flex;align-items:center;justify-content:center}
+button.circle{width:40px;height:40px;border-radius:50%;padding:0;font-size:17px;display:inline-flex;align-items:center;justify-content:center}
+button.small{padding:8px 12px;border-radius:14px;font-size:12px}
+button.danger{color:#ff8a8a}
+button.primary{font-weight:700}
+.row{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap}
+
+/* player */
+.now{text-align:center;padding:26px 16px 30px}
+.now .title{font-size:18px;font-weight:700;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;line-height:1.3}
+.now .artist{margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status{margin-top:6px;font-size:13px;color:var(--muted)}
+
+.disc{width:min(280px,78vw);aspect-ratio:1;height:auto;margin:26px auto;border-radius:50%;position:relative;overflow:hidden;
+  background:linear-gradient(135deg,#25252b,#101014);box-shadow:0 6px 14px rgba(0,0,0,.28)}
+.disc img{display:block;width:100%;height:100%;object-fit:cover;object-position:center;border-radius:inherit;background:transparent;transform:none!important;animation:none!important}
+.disc .art-placeholder{display:grid;place-items:center;width:100%;height:100%;font-size:48px;color:var(--muted);background:linear-gradient(135deg,var(--active),var(--well))}
+
+.progress{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:11px;color:var(--muted)}
+.bar{flex:1;height:26px;position:relative;touch-action:none;cursor:pointer}
+.bar::before{content:"";position:absolute;left:0;right:0;top:50%;height:4px;margin-top:-2px;border-radius:4px;background:var(--well)}
+.bar i{position:absolute;left:0;top:50%;height:4px;margin-top:-2px;width:0;border-radius:4px;background:var(--text);opacity:.6}
+.bar .knob{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:var(--text);box-shadow:0 2px 6px rgba(0,0,0,.5);touch-action:none}
+
+.search,.form{display:flex;gap:8px;align-items:center;padding:4px;border-radius:16px;background:var(--well);width:100%}
+.search input,.form input{flex:1;border:0;outline:0;background:transparent;color:var(--text);font:inherit;padding:11px 12px;min-width:0}
+.search input::placeholder,.form input::placeholder{color:var(--muted)}
+.search button,.form button{padding:9px 14px;flex-shrink:0;border-radius:14px}
+
+.list{display:grid;gap:8px;width:100%}
+.item{display:flex;align-items:center;gap:10px;padding:7px;border-radius:16px;background:var(--item);min-width:0}
+.item.active{background:var(--active)}
+.item img,.item .ph{width:42px;height:42px;border-radius:12px;object-fit:cover;flex-shrink:0;background:var(--btn)}
+.item .meta{flex:1;min-width:0}
+.item .t{font-weight:600;font-size:13px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.item .a{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.acts{display:flex;gap:5px;flex-shrink:0}
+.acts button{width:31px;height:31px;padding:0;border-radius:50%;font-size:11px}.acts button[data-act="saveoffline"]{font-size:15px}
+
+.album{display:flex;align-items:center;gap:10px;padding:9px;border-radius:18px;background:var(--item);cursor:pointer;min-width:0}
+.album .cover{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:var(--btn);flex-shrink:0;font-size:18px}
+.album .meta{flex:1;min-width:0}
+.album .t{font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.album .a{font-size:11px;color:var(--muted)}
+
+.nav{position:absolute;bottom:0;left:0;right:0;z-index:5;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;
+  padding:8px 12px calc(10px + env(safe-area-inset-bottom));background:var(--nav);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--border)}
+.tab{background:none;border:0;box-shadow:none;border-radius:16px;padding:7px 0;font-size:11px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px}
+.tab:active{transform:scale(.96)}
+.tab .i{font-size:17px}
+.tab.on{color:var(--text);font-weight:700;background:var(--btn)}
+
+.overlay{position:absolute;inset:0;background:rgba(0,0,0,.6);z-index:10;display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-height:70%;padding:16px;border-radius:26px 26px 0 0;display:flex;flex-direction:column;gap:10px;background:var(--sheet);border-top:1px solid var(--border)}
+.sheet-list{display:grid;gap:8px;overflow:auto;max-height:40vh}
+.sheet-actions{display:flex;gap:8px}
+.sheet-actions button{flex:1}
+
+/* side menu */
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.55);z-index:20}
+.home-offline-hit{position:absolute;left:68px;top:0;width:42px;height:44px;padding:0;border:0;background:transparent;opacity:0;z-index:2;cursor:pointer}
+.drawer{position:absolute;top:0;bottom:0;left:0;width:80%;max-width:300px;z-index:21;background:var(--sheet);
+  border-right:1px solid var(--border);padding:40px 14px 20px;transform:translateX(-105%);transition:transform .25s ease;
+  overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+.drawer.open{transform:none}
+.profile-btn{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border-radius:20px;text-align:left}
+.avatar{width:44px;height:44px;min-width:44px;border-radius:50%;display:grid;place-items:center;background:var(--btn);border:1px solid var(--border);font-weight:800;font-size:18px}
+.pname{font-weight:700;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mi{display:flex;width:100%;justify-content:space-between;align-items:center;text-align:left;border-radius:999px;padding:12px 16px}
+.drawer .foot{margin-top:auto;font-size:12px;color:var(--muted);line-height:1.5;padding-top:10px}
+
+/* full pages */
+.fullpage{position:absolute;inset:0;z-index:30;background:var(--bg);display:flex;flex-direction:column}
+.fullpage .phead{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;padding:34px 14px 12px}
+.fullpage .phead .pt{text-align:center;font-weight:800;font-size:17px}
+.fullpage .pbody{flex:1;overflow-y:auto;padding:4px 18px 36px;display:flex;flex-direction:column;gap:14px}
+.fullpage h3{font-size:15px;font-weight:700;margin-top:6px}
+.fullpage p{font-size:14px;line-height:1.65;color:var(--text);opacity:.92}
+.fullpage .updated{font-size:12px;color:var(--muted)}
+.fullpage .legal{margin-top:18px;font-size:12px;color:var(--muted);text-align:center;line-height:1.6}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:12px;color:var(--muted);font-weight:600}
+.field .well{display:flex;align-items:center;gap:8px;border-radius:16px;background:var(--well);padding:4px 4px 4px 12px}
+.field input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--text);font:inherit;padding:11px 0}
+.field input::placeholder{color:var(--muted)}
+.datepick{position:relative;width:40px;height:40px;border-radius:12px;background:var(--btn);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}
+.datepick input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+.datepick span{pointer-events:none;font-size:16px}
+select.sel{font:inherit;color:var(--text);background:var(--btn);border:1px solid var(--border);border-radius:14px;padding:12px;width:100%}
+.note{font-size:12px;color:var(--muted);min-height:16px}
+.setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--border)}
+.setting-row strong{display:block;font-size:13px}.setting-row small{display:block;color:var(--muted);font-size:11px;margin-top:3px}
+select.sel.compact{width:auto;max-width:145px;padding:9px;font-size:12px}
+.setting-action{display:block;width:100%;text-align:left;margin-top:8px;border-radius:14px;padding:12px;font-size:13px}
+.offline-hero{display:flex;align-items:center;gap:14px;padding:18px!important;background:linear-gradient(135deg,rgba(125,125,135,.18),var(--card))}.offline-hero .offline-icon{width:54px;height:54px;border-radius:18px;display:grid;place-items:center;background:var(--active);font-size:25px}.offline-hero strong{display:block;font-size:16px}.offline-hero small{display:block;color:var(--muted);font-size:12px;margin-top:4px}.offline-info{font-size:11px;color:var(--muted);padding:0 4px}
+</style>
+</head>
+<body>
+<div class="app" id="appRoot">
+  <div class="screen" id="screen">
+    <header class="top">
+      <button class="circle" id="setBtn" title="Menu" aria-label="Menu">☰</button>
+      <button class="home-offline-hit" data-page="offline" aria-label="Offline Songs" title="Offline Songs"></button>
+      <div class="brand" id="songWave" role="img" aria-label="Song waveform visualizer"><div class="song-wave" id="songWaveBars" aria-hidden="true"></div></div>
+      <button class="circle" id="themeBtn" title="Theme" aria-label="Theme">☾</button>
+      <button class="file-hit" data-act="pickfile" aria-label="Open files"></button>
+    </header>
+
+    <section class="view active" id="view-home">
+            <div class="card now">
+        <div class="title" id="title">No Track</div>
+        <div class="artist muted" id="artist"></div>
+        <div class="status" id="status">Stopped</div>
+        <div class="disc" id="disc"></div>
+        <div class="progress">
+          <span id="cur">0:00</span>
+          <div class="bar" id="bar"><i id="barFill"></i><span class="knob" id="knob"></span></div>
+          <span id="dur">0:00</span>
+        </div>
+        <div class="row" style="margin-top:14px">
+          <button class="round" id="shuffleBtn" data-act="ctrl" data-c="shuffle">⤨</button>
+          <button class="round" data-act="ctrl" data-c="prev">⏮</button>
+          <button class="big" id="playBtn" data-act="ctrl" data-c="toggle">▶</button>
+          <button class="round" data-act="ctrl" data-c="next">⏭</button>
+          <button class="round" id="repeatBtn" data-act="ctrl" data-c="repeat">↻</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Search</h2>
+        <div class="search">
+          <input id="q" placeholder="Search songs or artists…" autocomplete="off">
+          <button id="goBtn">Go</button>
+        </div>
+      </div>
+
+      <div class="card" id="resultsPanel" hidden>
+        <h2>Results</h2>
+        <div class="list" id="results"></div>
+      </div>
+
+      <div class="card">
+        <h2>Queue</h2>
+        <div class="list" id="queue"><div class="muted">Nothing queued yet.</div></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-albums">
+      <div class="head">
+        <button class="small" data-page="offline">♫ Offline Songs</button>
+        <button class="small" id="albumBack" data-act="backalbum" hidden>‹ Back</button>
+        <div class="page-title" id="albumsTitle">Albums</div>
+        
+      </div>
+      <div class="card" id="newAlbumBox">
+        <h2>Create album</h2>
+        <div class="form">
+          <input id="albumName" placeholder="Album name…" autocomplete="off" maxlength="40">
+          <button class="primary small" data-act="createalbum">Create</button>
+        </div>
+      </div>
+      <div class="row" id="albumTools" hidden>
+        <button class="small" data-act="playall" data-list="album">▶ Play all</button>
+        <button class="small" data-act="playall" data-list="album" data-shuffle="1">⤨ Shuffle</button>
+        <button class="small" data-act="sharealbum">↗ Share album</button><button class="small danger" data-act="delalbum">🗑 Delete album</button>
+      </div>
+      <div class="card"><div class="list" id="albumsBox"></div></div>
+    </section>
+
+    <section class="view" id="view-liked">
+      <div class="head">
+        <div class="page-title">Liked songs</div>
+        <span class="muted" id="likedCount"></span>
+      </div>
+      <div class="row">
+        <button class="small" data-act="playall" data-list="liked">▶ Play all</button>
+        <button class="small" data-act="playall" data-list="liked" data-shuffle="1">⤨ Shuffle</button>
+      </div>
+      <div class="card"><div class="list" id="likedBox"></div></div>
+    </section>
+  </div>
+
+  <nav class="nav">
+    <button class="tab on" data-tab="home"><span class="i">⌂</span>Home</button>
+    <button class="tab" data-tab="albums"><span class="i">▤</span>Albums</button>
+    <button class="tab" data-tab="liked"><span class="i">♥</span>Liked</button>
+  </nav>
+
+  <div class="overlay" id="sheet" hidden>
+    <div class="sheet">
+      <h2>Add to album</h2>
+      <div class="sheet-list" id="sheetList"></div>
+      <div class="sheet-actions"><button class="primary" data-act="saveofflineSheet">⇩ Save offline</button><button data-act="closesheet">Cancel</button></div><div class="note" id="sheetNote" role="status" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <div class="scrim" id="scrim" hidden></div>
+  <aside class="drawer" id="drawer">
+    <button class="profile-btn card" data-page="profile">
+      <div class="avatar" id="avatar">?</div>
+      <div class="pname" id="pName">Your profile</div>
+    </button>
+    <button class="mi card" data-page="settings">Settings <span>›</span></button>
+    <button class="mi card" data-page="privacy">Privacy Policy <span>›</span></button>
+    <button class="mi card" data-page="terms">Terms &amp; Conditions <span>›</span></button>
+    <div class="foot">SpotifX™ · made by Irfan S<br>© 2026 All rights reserved.</div>
+  </aside>
+
+  <section class="fullpage" id="page" hidden>
+    <div class="phead">
+      <button class="circle" id="pageBack" aria-label="Back">‹</button>
+      <div class="pt" id="pageTitle"></div>
+      <span></span>
+    </div>
+    <div class="pbody" id="pageBody"></div>
+  </section>
+</div>
+
+<input type="file" id="backupInput" accept="application/json,.json" hidden><input type="file" id="fileInput" accept="audio/*,.txt,text/plain,.spotifx,application/json" multiple hidden>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = s => { s = Math.max(0, Math.floor(s || 0)); return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`; };
+const post = (url, body) => fetch(url, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)}).then(r => r.json());
+const LS = {
+  get(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); return v ?? d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+
+/* Persistent audio-file storage for browser/PWA installs. */
+let offlineDbPromise;
+function offlineDb() {
+  if (!("indexedDB" in window)) return Promise.reject(new Error("Persistent storage is not supported here."));
+  if (!offlineDbPromise) offlineDbPromise = new Promise((resolve, reject) => {
+    const request = indexedDB.open("spotifx-offline-audio", 1);
+    request.onupgradeneeded = () => { if (!request.result.objectStoreNames.contains("audio")) request.result.createObjectStore("audio"); };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error("Could not open offline storage."));
+  });
+  return offlineDbPromise;
+}
+async function putOfflineBlob(id, blob) {
+  const db = await offlineDb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction("audio", "readwrite");
+    tx.objectStore("audio").put({ blob, name: blob.name || "audio", type: blob.type || "application/octet-stream", size: blob.size || 0 }, id);
+    tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
+  });
+}
+async function getOfflineBlob(id) {
+  const db = await offlineDb();
+  return new Promise((resolve, reject) => {
+    const req = db.transaction("audio").objectStore("audio").get(id);
+    req.onsuccess = () => resolve(req.result || null); req.onerror = () => reject(req.error);
+  });
+}
+async function deleteOfflineBlob(id) {
+  const db = await offlineDb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction("audio", "readwrite"); tx.objectStore("audio").delete(id);
+    tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
+  });
+}
+async function clearOfflineBlobs() {
+  const db = await offlineDb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction("audio", "readwrite"); tx.objectStore("audio").clear();
+    tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
+  });
+}
+async function restoreOfflineBlobUrls() {
+  let changed = false;
+  const kept = [];
+  for (const track of offlineTracks) {
+    if (track.storage === "indexeddb") {
+      try {
+        const record = await getOfflineBlob(track.id);
+        if (!record || !record.blob) { changed = true; continue; }
+        track.uri = URL.createObjectURL(record.blob);
+        track.bytes = record.size || record.blob.size || 0;
+      } catch (e) { changed = true; continue; }
+    }
+    kept.push(track);
+  }
+  offlineTracks = kept;
+  currentQueue = currentQueue.map(item => {
+    const saved = offlineTracks.find(track => track.id && track.id === item.id);
+    return saved ? { ...item, uri: saved.uri } : item;
+  });
+  if (changed) saveAll();
+  renderAll();
+}
+
+
+(function () {
+  const realFetch = window.fetch.bind(window);
+  const json = obj => new Response(JSON.stringify(obj), { headers: { "Content-Type": "application/json" } });
+  window.fetch = function (url, opts) {
+    const u = String(url);
+    if (!u.startsWith("/api/")) return realFetch(url, opts);
+    const parts = u.split("?");
+    const path = parts[0];
+    const p = new URLSearchParams(parts[1] || "");
+    let body = {};
+    try { body = opts && typeof opts.body === "string" ? JSON.parse(opts.body) : {}; } catch (e) {}
+    if (path === "/api/status") return Promise.resolve(json(JSON.parse(AndroidBridge.status())));
+    if (path === "/api/control") { AndroidBridge.control(body.action || "", String(body.value ?? "")); return Promise.resolve(json({ ok: true })); }
+    if (path === "/api/queue") { AndroidBridge.setQueue(JSON.stringify(body.items || []), body.index || 0); return Promise.resolve(json({ ok: true })); }
+    if (path === "/api/search") return new Promise(resolve => {
+      window.__searchRes = list => resolve(json({ results: list }));
+      AndroidBridge.search(p.get("q") || "");
+    });
+    return Promise.resolve(json({ error: "Not available in the app" }));
+  };
+})();
+
+/* theme: dark or light, default dark */
+function applyTheme() {
+  const m = LS.get("snuffy.theme", "dark");
+  document.documentElement.dataset.theme = m === "light" ? "light" : "dark";
+  $("themeBtn").textContent = m === "light" ? "☀" : "☾";
+}
+function toggleTheme() {
+  LS.set("snuffy.theme", LS.get("snuffy.theme", "dark") === "light" ? "dark" : "light");
+  applyTheme();
+}
+
+/* state */
+let st = {}, queueSig = "", sheetItem = null, lastResults = [], openAlbumId = null;
+let seeking = false, dragPct = 0, dragging = false;
+let albums = LS.get("snuffy.albums", []);
+let recentTracks = LS.get("snuffy.recent", []);
+let searchHistory = LS.get("snuffy.searchHistory", []);
+let offlineTracks = LS.get("snuffy.offline", []);
+let liked = LS.get("snuffy.liked", []);
+let currentQueue = LS.get("snuffy.queue", []);
+let profile = LS.get("snuffy.profile", { name: "", dob: "", email: "" });
+
+const clean = i => ({ id: i.id || null, uri: i.uri || "", title: i.title || "Unknown", artist: i.artist || "", thumb: i.thumb || "", storage: i.storage || "", bytes: Number(i.bytes) || 0 });
+const keyOf = i => i.id ? `v:${i.id}` : i.uri ? `u:${i.uri}` : `t:${i.title}|${i.artist || ""}`;
+const isLiked = i => liked.some(x => keyOf(x) === keyOf(i));
+const saveAll = () => {
+  LS.set("snuffy.albums", albums); LS.set("snuffy.liked", liked);
+  const storedOffline = offlineTracks.map(t => t.storage === "indexeddb" ? { ...t, uri: "idb:" + t.id } : t);
+  const storedQueue = currentQueue.map(q => { const saved = offlineTracks.find(t => t.id && t.id === q.id); return saved && saved.storage === "indexeddb" ? { ...q, uri: "idb:" + saved.id } : q; });
+  LS.set("snuffy.queue", storedQueue); LS.set("snuffy.offline", storedOffline);
+};
+const openAlbum = () => albums.find(a => a.id === openAlbumId);
+const queueItems = () => currentQueue.length ? currentQueue : (st.queue || []);
+
+function currentItem() {
+  const t = st.track;
+  if (!t) return null;
+  const c = currentQueue[st.index];
+  if (c && c.title === t.title) return c;
+  return clean({ title: t.title, artist: t.artist, thumb: t.thumb });
+}
+function getList(name) {
+  if (name === "search") return lastResults;
+  if (name === "liked") return liked;
+  if (name === "recent") return recentTracks;
+  if (name === "offline") return offlineTracks;
+  if (name === "queue") return queueItems();
+  if (name === "album") return openAlbum() ? openAlbum().tracks : [];
+  return [];
+}
+function thumbHTML(i) {
+  return i.thumb ? `<img src="${esc(i.thumb)}" alt="" loading="lazy">` : `<div class="ph"></div>`;
+}
+function row(item, list, idx, o = {}) {
+  const on = isLiked(item);
+  const add = o.add !== false;
+  const rm = o.rm ? `<button data-act="${o.rm === "offline" ? "rmoffline" : "rmtrack"}" data-i="${idx}" title="Remove">×</button>` : "";
+  const savedOffline = offlineTracks.some(t => keyOf(t) === keyOf(item));
+  return `<div class="item ${o.active ? "active" : ""}">
+    ${thumbHTML(item)}
+    <div class="meta"><div class="t">${esc(item.title)}</div><div class="a">${esc(item.artist)}</div></div>
+    <div class="acts">
+      <button data-act="play" data-list="${list}" data-i="${idx}" title="Play">▶</button>
+      <button class="${on ? "on" : ""}" data-act="like" data-list="${list}" data-i="${idx}" title="Like">${on ? "♥" : "♡"}</button>
+      ${add ? `<button data-act="addalbum" data-list="${list}" data-i="${idx}" title="Add to album">+</button>` : ""}
+      ${rm}
+    </div></div>`;
+}
+
+function openPlayer() { setView('home'); }
+
+/* playback */
+async function playList(items, index = 0) {
+  if (!items.length) return;
+  currentQueue = items.map(clean);
+  const played = currentQueue[index];
+  if (played) { recentTracks = [played, ...recentTracks.filter(t => keyOf(t) !== keyOf(played))].slice(0, 100); LS.set("snuffy.recent", recentTracks); }
+  saveAll();
+  await post("/api/queue", { items: currentQueue, index });
+  refresh();
+}
+async function control(action, value) { await post("/api/control", { action, value }); refresh(); }
+
+window.__localTracks = arr => {
+  const incoming = arr.map(x => ({ id: x.id || ("native:" + x.uri), uri: x.uri, title: x.title, artist: "On this device", storage: "native" }));
+  const known = new Set(offlineTracks.map(keyOf));
+  incoming.forEach(track => { if (!known.has(keyOf(track))) offlineTracks.push(track); });
+  saveAll(); renderOfflinePage(); return playList(incoming, 0);
+};
+async function importBrowserAudio(files) {
+  const incoming = [];
+  for (const file of files) {
+    if (!file.type.startsWith("audio/") && !/\.(mp3|m4a|aac|wav|ogg|flac|opus|aiff|wma)$/i.test(file.name)) continue;
+    const id = "web:" + (crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random().toString(36).slice(2));
+    try {
+      await putOfflineBlob(id, file);
+      const track = { id, uri: URL.createObjectURL(file), title: file.name.replace(/\.[^.]+$/, ""), artist: "On this device", thumb: "", storage: "indexeddb", bytes: file.size || 0 };
+      offlineTracks.unshift(track); incoming.push(track);
+    } catch (error) {
+      alert("Could not save " + file.name + " offline. Check browser storage permissions and available space.");
+    }
+  }
+  saveAll(); renderOfflinePage(); renderAll();
+  if (incoming.length) { await playList(incoming, 0); alert(incoming.length + " audio file(s) saved for offline playback on this device."); }
+}
+window.__fileLines = lines => playList(lines.map(t => ({ id: null, title: t, artist: "File" })), 0);
+window.__importAlbum = raw => { try { const data = typeof raw === "string" ? JSON.parse(raw) : raw; if (!data || data.format !== "spotifx-album" || !Array.isArray(data.tracks) || data.tracks.length > 500) throw new Error("Invalid album"); const tracks = data.tracks.map(t => clean({ id: t.id, title: t.title, artist: t.artist, thumb: t.thumb })); if (!tracks.length) throw new Error("Empty album"); const album = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: String(data.name || "Shared album").slice(0, 40), tracks }; albums.push(album); saveAll(); openAlbumId = album.id; renderAlbums(); setView("albums"); alert("Imported album: " + album.name); return true; } catch (e) { alert("This SpotifX album file is invalid."); return false; } };
+
+function openFilePicker() {
+  if (window.AndroidBridge) AndroidBridge.pickFile();
+  else $("fileInput").click();
+}
+$("fileInput").addEventListener("change", async e => {
+  const files = [...e.target.files];
+  for (const file of files) {
+    if (/\.spotifx$/i.test(file.name)) { try { window.__importAlbum && window.__importAlbum(await file.text()); } catch (_) {} }
+  }
+  const audio = files.filter(f => !/\.(txt|spotifx)$/i.test(f.name));
+  if (audio.length) await importBrowserAudio(audio);
+  e.target.value = "";
+});
+
+/* progress: drag the knob or tap the line to move the song */
+function pctFromClientX(clientX) {
+  const r = $("bar").getBoundingClientRect();
+  return Math.min(1, Math.max(0, (clientX - r.left) / r.width));
+}
+function paintProgress(pct, seconds) {
+  const s = (pct * 100) + "%";
+  $("barFill").style.width = s;
+  $("knob").style.left = s;
+  $("cur").textContent = fmt(seconds);
+}
+$("bar").addEventListener("pointerdown", e => {
+  if (!(st.duration > 0)) return;
+  dragging = true; seeking = true;
+  $("bar").setPointerCapture(e.pointerId);
+  dragPct = pctFromClientX(e.clientX);
+  paintProgress(dragPct, dragPct * st.duration);
+});
+$("bar").addEventListener("pointermove", e => {
+  if (!dragging) return;
+  dragPct = pctFromClientX(e.clientX);
+  paintProgress(dragPct, dragPct * st.duration);
+});
+function endDrag() {
+  if (!dragging) return;
+  dragging = false;
+  seeking = false;
+  control("seek", dragPct * st.duration);
+}
+$("bar").addEventListener("pointerup", endDrag);
+$("bar").addEventListener("pointercancel", endDrag);
+
+/* likes */
+function toggleLike(item) {
+  if (!item) return;
+  const k = keyOf(item);
+  liked = isLiked(item) ? liked.filter(x => keyOf(x) !== k) : [...liked, clean(item)];
+  saveAll(); renderAll();
+}
+
+/* albums */
+function createAlbumFromPage() {
+  const name = $("albumName").value.trim();
+  if (!name) return;
+  albums.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name, tracks: [] });
+  saveAll();
+  $("albumName").value = "";
+  renderAlbums();
+}
+function openSheet(item) { sheetItem = clean(item); renderSheet(); lockBackground(); $("sheet").hidden = false; }
+function closeSheet() { $("sheet").hidden = true; sheetItem = null; unlockBackground(); }
+function renderSheet() {
+  $("sheetNote").textContent = "";
+  $("sheetList").innerHTML = albums.length
+    ? albums.map(a => `<div class="album" data-act="pick" data-id="${esc(a.id)}">
+        <div class="cover">♫</div>
+        <div class="meta"><div class="t">${esc(a.name)}</div><div class="a">${a.tracks.length} songs</div></div></div>`).join("")
+    : '<div class="muted">No albums yet. Create one in the Albums tab.</div>';
+}
+function pickAlbum(id) {
+  const a = albums.find(x => x.id === id);
+  if (!a || !sheetItem) return;
+  if (!a.tracks.some(t => keyOf(t) === keyOf(sheetItem))) a.tracks.push(sheetItem);
+  saveAll(); closeSheet(); renderAlbums();
+}
+function removeTrack(i) { const a = openAlbum(); if (!a) return; a.tracks.splice(i, 1); saveAll(); renderAlbums(); }
+async function saveOfflineFromItem(item) {
+  if (!item) return;
+  if (offlineTracks.some(t => keyOf(t) === keyOf(item))) {
+    settingMessage("This song is already saved offline on this device.");
+    return;
+  }
+  // Save only user-imported local audio. Online stream URLs do not grant download rights.
+  if (item.storage === "indexeddb" && item.id) {
+    try {
+      const record = await getOfflineBlob(item.id);
+      if (!record || !record.blob) throw new Error("Audio file is unavailable");
+      const saved = { ...clean(item), storage: "indexeddb", uri: "", bytes: record.size || record.blob.size || 0 };
+      offlineTracks.unshift(saved); saveAll(); renderOfflinePage(); renderAll();
+      settingMessage("Saved for offline listening.");
+    } catch (e) { settingMessage("Could not save this audio file offline."); }
+    return;
+  }
+  if (item.storage === "native" && item.uri) {
+    offlineTracks.unshift({ ...clean(item), storage: "native", bytes: Number(item.bytes) || 0 });
+    saveAll(); renderOfflinePage(); renderAll();
+    settingMessage("Saved for offline listening.");
+    return;
+  }
+  if (item.id && window.AndroidBridge && typeof AndroidBridge.downloadTrack === "function") {
+    settingMessage("Downloading audio to this device… keep the app open until it finishes.");
+    AndroidBridge.downloadTrack(JSON.stringify(item));
+    return;
+  }
+  settingMessage("Offline downloads from streaming results are currently supported in the Android app. On this device, import an audio file to save it offline.");
+}
+window.__offlineDownloadResult = raw => {
+  let result;
+  try { result = typeof raw === "string" ? JSON.parse(raw) : raw; } catch (_) { result = null; }
+  if (!result || !result.ok || !result.track) {
+    settingMessage("Offline download failed: " + (result && result.error ? result.error : "unknown error"));
+    return;
+  }
+  const track = { ...result.track, storage: "native" };
+  if (!offlineTracks.some(t => keyOf(t) === keyOf(track))) offlineTracks.unshift(track);
+  saveAll(); renderOfflinePage(); renderAll();
+  settingMessage("Downloaded and saved for offline listening.");
+};
+async function removeOfflineTrack(i) {
+  if (!Number.isInteger(i) || i < 0 || i >= offlineTracks.length) return;
+  const [track] = offlineTracks.splice(i, 1);
+  if (track.storage === "indexeddb") { try { await deleteOfflineBlob(track.id); } catch (_) {} }
+  if (track.storage === "native" && window.AndroidBridge && typeof AndroidBridge.deleteOffline === "function") AndroidBridge.deleteOffline(track.uri);
+  if (track.uri && track.uri.startsWith("blob:")) URL.revokeObjectURL(track.uri);
+  currentQueue = currentQueue.filter(item => item.id !== track.id);
+  saveAll(); renderOfflinePage(); renderQueue();
+} async function shareAlbum() { const a = openAlbum(); if (!a) return; if (!a.tracks.length) { alert("Add songs to this album before sharing."); return; } const payload = { format: "spotifx-album", version: 1, name: a.name, tracks: a.tracks.map(t => ({ id: t.id || null, title: t.title, artist: t.artist, thumb: t.thumb || "" })) }; const content = JSON.stringify(payload, null, 2); if (window.AndroidBridge && typeof AndroidBridge.shareAlbum === "function") { AndroidBridge.shareAlbum(content); return; } if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.snuffy) { window.webkit.messageHandlers.snuffy.postMessage({ action: "shareAlbum", content: content }); return; } const safeName = a.name.replace(/[^a-z0-9_-]+/gi, "-") || "SpotifX-Album"; const file = new File([content], safeName + ".spotifx", { type: "application/json" }); if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: a.name }); return; } catch (e) { if (e && e.name === "AbortError") return; } } const url = URL.createObjectURL(file); const link = document.createElement("a"); link.href = url; link.download = file.name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1500); } function deleteAlbum() {
+  const a = openAlbum(); if (!a) return;
+  albums = albums.filter(x => x.id !== a.id);
+  openAlbumId = null; saveAll(); renderAlbums();
+}
+function renderAlbums() {
+  const a = openAlbum();
+  if (openAlbumId && !a) openAlbumId = null;
+  if (a) {
+    $("albumsTitle").textContent = a.name;
+    $("albumBack").hidden = false;
+    $("newAlbumBox").hidden = true;
+    $("albumTools").hidden = false;
+    $("albumsBox").innerHTML = a.tracks.length
+      ? a.tracks.map((t, i) => row(t, "album", i, { add: false, rm: true })).join("")
+      : '<div class="muted">This album is empty. Tap + on any song to add it.</div>';
+  } else {
+    $("albumsTitle").textContent = "Albums";
+    $("albumBack").hidden = true;
+    $("newAlbumBox").hidden = false;
+    $("albumTools").hidden = true;
+    $("albumsBox").innerHTML = albums.length
+      ? albums.map(al => `<div class="album" data-act="openalbum" data-id="${esc(al.id)}">
+          <div class="cover">♫</div>
+          <div class="meta"><div class="t">${esc(al.name)}</div><div class="a">${al.tracks.length} songs</div></div></div>`).join("")
+      : '<div class="muted">No albums yet. Create one above.</div>';
+  }
+}
+
+/* date of birth: digits only, slashes added automatically */
+function digitsOnly(s) { return String(s || "").replace(/\D/g, "").slice(0, 8); }
+function maskDob(digits) {
+  let out = digits.slice(0, 2);
+  if (digits.length >= 2) out += "/" + digits.slice(2, 4);
+  if (digits.length >= 4) out += "/" + digits.slice(4, 8);
+  return out;
+}
+function displayToIso(s) {
+  const m = String(s || "").match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return "";
+  const [_, d, mo, y] = m;
+  const dt = new Date(`${y}-${mo}-${d}T00:00:00`);
+  if (isNaN(dt) || dt.getDate() !== Number(d) || dt.getMonth() + 1 !== Number(mo)) return "";
+  return `${y}-${mo}-${d}`;
+}
+function isoToDisplay(iso) {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  return y && m && d ? `${d}/${m}/${y}` : "";
+}
+function syncCalendar() {
+  const iso = displayToIso($("pfDobText").value);
+  if (iso) $("pfDobPick").value = iso;
+}
+
+function renderProfileHeader() {
+  const name = (profile.name || "").trim();
+  $("pName").textContent = name || "Your profile";
+  $("avatar").textContent = name ? name.charAt(0).toUpperCase() : "?";
+}
+function profileForm() {
+  return `
+    <div class="field"><label for="pfName">Name</label>
+      <div class="well"><input id="pfName" value="${esc(profile.name)}" placeholder="Your name" autocomplete="off"></div></div>
+    <div class="field"><label for="pfDobText">Date of birth</label>
+      <div class="well">
+        <input id="pfDobText" value="${esc(isoToDisplay(profile.dob))}" placeholder="DD/MM/YYYY" inputmode="numeric" autocomplete="off" maxlength="10">
+        <label class="datepick" title="Pick from calendar"><span>📅</span>
+          <input type="date" id="pfDobPick" value="${esc(profile.dob)}">
+        </label>
+      </div></div>
+    <div class="field"><label for="pfEmail">Email</label>
+      <div class="well"><input id="pfEmail" type="email" value="${esc(profile.email)}" placeholder="you@example.com" autocomplete="off"></div></div>
+    <div class="row"><button class="primary" data-act="saveprofile">Save</button></div>
+    <div class="note" id="pfNote"></div>`;
+}
+function saveProfile() {
+  const name = $("pfName").value.trim();
+  const dobText = $("pfDobText").value.trim();
+  const dob = $("pfDobPick").value || displayToIso(dobText);
+  const email = $("pfEmail").value.trim();
+  if (dobText && !dob) { $("pfNote").textContent = "Date should be DD/MM/YYYY, or pick it from the calendar."; return; }
+  profile = { name, dob, email };
+  LS.set("snuffy.profile", profile);
+  renderProfileHeader();
+  $("pfNote").textContent = "Saved.";
+}
+
+/* side menu and full pages */
+const PAGE_TITLES = { profile: "Profile", offline: "Offline Songs", recent: "Recently Played", settings: "Settings", privacy: "Privacy Policy", terms: "Terms & Conditions", license: "Open-source licenses" };
+const LEGAL_FOOT = `<div class="legal">© 2026 SpotifX™. All rights reserved.</div>`;
+const PAGES = {
+  profile: () => profileForm(),
+  recent: () => `<div class="card"><p class="muted">Your latest listening activity on this device.</p><div class="list" id="recentBox"></div></div><div class="row"><button class="small danger" data-act="clearRecent">Clear listening history</button></div>${LEGAL_FOOT}`,
+  offline: () => `<div class="head"><div class="page-title">Offline Songs</div><button class="file-hit" data-act="pickfile" aria-label="Add offline songs" title="Add offline songs"></button></div><div class="row"><button class="small" data-act="playall" data-list="offline">▶ Play all</button><button class="small" data-act="playall" data-list="offline" data-shuffle="1">⤨ Shuffle</button></div><div class="offline-info" id="offlineSummary">0 songs saved on this device</div><div class="card"><div class="list" id="offlineBox"></div></div>${LEGAL_FOOT}`,
+  settings: () => `
+    <h3>Sound quality</h3>
+    <p class="muted">Choose how audio should sound. Your choice is saved on this phone.</p>
+    <select class="sel" onchange="LS.set('snuffy.quality', this.value)">
+      <option value="auto" ${LS.get("snuffy.quality","auto")==="auto"?"selected":""}>Auto</option>
+      <option value="high" ${LS.get("snuffy.quality","auto")==="high"?"selected":""}>High</option>
+      <option value="data" ${LS.get("snuffy.quality","auto")==="data"?"selected":""}>Data saver</option>
+    </select>
+    ${LEGAL_FOOT}`,
+  privacy: () => `
+    <p class="updated">Last updated: October 2026</p>
+    <p>SpotifX respects your privacy. This policy explains how the app handles information.</p>
+    <h3>Contact</h3>
+    <p>For questions about this policy, use the project page linked in Terms &amp; Conditions.</p>
+    ${LEGAL_FOOT}`,
+  license: () => `
+    <p>SpotifX uses open-source components and platform libraries. Their respective authors retain their copyrights and licenses.</p>
+    <p>Third-party component licenses are distributed with their respective packages and source repositories.</p>
+    ${LEGAL_FOOT}`,
+  terms: () => `
+    <p class="updated">Last updated: October 2026</p>
+    <p>By using SpotifX you agree to these terms. If you do not agree, please do not use the app.</p>
+    <h3>Personal use</h3>
+    <p>SpotifX is provided for personal, non-commercial use.</p>
+    <h3>Your content</h3>
+    <p>You are responsible for the files you open and the searches you make.</p>
+    <h3>No warranty</h3>
+    <p>SpotifX is provided as it is, without warranty of any kind. Availability of online songs depends on third-party services.</p>
+    <h3>Changes</h3>
+    <p>These terms may change. Continued use of the app means you accept the updated terms.</p>
+    <h3>Project</h3>
+    <p>Visit the project page: <a href="https://github.com/irfannzz18">github.com/irfannzz18</a></p>
+    ${LEGAL_FOOT}`
+};
+function settingMessage(message) { const n=$("settingsNote"); if(n)n.textContent=message; const sn=$("sheetNote"); if(sn)sn.textContent=message; }
+function exportLibraryBackup() {
+  const payload={format:"spotifx-backup",version:1,createdAt:new Date().toISOString(),albums,liked,offlineTracks,recentTracks,searchHistory,profile,theme:LS.get("snuffy.theme","dark"),quality:LS.get("snuffy.quality","auto")};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download="spotifx-backup.json"; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1500);
+  settingMessage("Backup exported to your device.");
+}
+function importLibraryBackup(file) {
+  file.text().then(raw=>{try{const d=JSON.parse(raw);if(d.format!=="spotifx-backup"||d.version!==1)throw Error("format");
+    albums=Array.isArray(d.albums)?d.albums:[];liked=Array.isArray(d.liked)?d.liked:[];offlineTracks=Array.isArray(d.offlineTracks)?d.offlineTracks:[];recentTracks=Array.isArray(d.recentTracks)?d.recentTracks:[];searchHistory=Array.isArray(d.searchHistory)?d.searchHistory:[];LS.set("snuffy.recent",recentTracks);LS.set("snuffy.searchHistory",searchHistory);
+    profile=d.profile&&typeof d.profile==="object"?d.profile:{name:"",dob:"",email:""};
+    LS.set("snuffy.theme",d.theme==="light"?"light":"dark");LS.set("snuffy.quality",["auto","high","data"].includes(d.quality)?d.quality:"auto");
+    saveAll();applyTheme();renderAll();if(!$("page").hidden)openPage("settings");settingMessage("Backup restored successfully.");
+  }catch(e){alert("Invalid SpotifX backup file.");}});
+}
+function renderRecentPage() { const box=$("recentBox"); if(box) box.innerHTML=recentTracks.length?recentTracks.map((t,i)=>row(t,"recent",i,{add:false})).join(""):'<div class="muted">No listening history yet.</div>'; }
+function renderOfflinePage() {
+  const box = $("offlineBox");
+  if (box) box.innerHTML = offlineTracks.length
+    ? offlineTracks.map((track, i) => row(track, "offline", i, { add: false, rm: "offline" })).join("")
+    : '<div class="muted">No offline songs yet. Import audio files you own, then use + → Save offline to keep them on this device.</div>';
+  const count = $("offlineCount"); const summary = $("offlineSummary"); if (summary) { const bytes = offlineTracks.reduce((n, t) => n + (Number(t.bytes) || 0), 0); const size = bytes >= 1024 * 1024 ? (bytes / 1024 / 1024).toFixed(1) + " MB" : bytes >= 1024 ? (bytes / 1024).toFixed(0) + " KB" : ""; summary.textContent = offlineTracks.length + " song" + (offlineTracks.length === 1 ? "" : "s") + " saved on this device" + (size ? " · " + size : ""); }
+  if (count) count.textContent = String(offlineTracks.length);
+}
+function lockBackground(){ $("appRoot").classList.add("lock-scroll"); }
+function unlockBackground(){ if($("drawer").classList.contains("open") || !$("page").hidden || !$("sheet").hidden) return; $("appRoot").classList.remove("lock-scroll"); }
+function openDrawer() { lockBackground(); $("drawer").classList.add("open"); $("scrim").hidden = false; }
+function closeDrawer() { $("drawer").classList.remove("open"); $("scrim").hidden = true; unlockBackground(); }
+function openPage(name) {
+  $("pageTitle").textContent = PAGE_TITLES[name];
+  $("pageBody").innerHTML = PAGES[name]();
+  $("pageBody").scrollTop = 0;
+  $("page").hidden = false;
+  lockBackground();
+  closeDrawer();
+  if (name === "offline") renderOfflinePage();
+  if (name === "recent") renderRecentPage();
+  if (name === "settings") { const q=$("qualitySetting"); if(q)q.value=LS.get("snuffy.quality","auto"); const ep=$("eqPreset"); if(ep)ep.value=LS.get("snuffy.eqPreset","normal"); const ee=$("eqEnabled"); if(ee)ee.checked=LS.get("snuffy.eqEnabled",true); }
+}
+function closePage() { $("page").hidden = true; unlockBackground(); }
+window.__spotifxHandleBack = function(){ if(!$("sheet").hidden){closeSheet();return true;} if($("drawer").classList.contains("open")){closeDrawer();return true;} if(!$("page").hidden){closePage();return true;} const active=document.querySelector(".tab.on"); if(active&&active.dataset.tab!=="home"){setView("home");return true;} return false; };
+
+/* rendering */
+function updateSongWave(track, playing, loading) {
+  const host = $("songWaveBars");
+  if (!host) return;
+  host.classList.toggle("visible", !!playing && !!track && !!track.title);
+  const title = String(track.title || "idle");
+  let seed = 0;
+  for (let i = 0; i < title.length; i++) seed = (seed * 31 + title.charCodeAt(i)) >>> 0;
+  const bars = thirtyWaveBars(seed);
+  const progress = st.duration > 0 ? Math.max(0, Math.min(1, (st.position || 0) / st.duration)) : 0;
+  host.classList.toggle("is-playing", !!playing);
+  host.classList.toggle("is-loading", !!loading);
+  host.setAttribute("aria-label", loading ? "Loading song" : playing ? "Waveform visualizer for " + title : "Paused waveform for " + title);
+  host.innerHTML = bars.map((height, i) => {
+    const position = i / Math.max(1, bars.length - 1);
+    const level = Math.max(3, Math.round(height * (0.65 + Math.abs(position - progress) * 0.35)));
+    const delay = -((seed + i * 97) % 900);
+    const speed = 430 + ((seed >>> (i % 16)) + i * 23) % 650;
+    return '<span style="--h:' + level + 'px;--delay:' + delay + 'ms;--speed:' + speed + 'ms"></span>';
+  }).join("");
+}
+function thirtyWaveBars(seed) {
+  const result = [];
+  for (let i = 0; i < 17; i++) {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    result.push(5 + (seed % 23));
+  }
+  return result;
+}
+function render() {
+  const t = st.track || {};
+  $("title").textContent = t.title || "No Track";
+  $("artist").textContent = t.artist || "";
+  const playing = st.state === "playing" && !st.paused;
+  let label = "Stopped";
+  if (st.state === "loading") label = "Loading…";
+  else if (st.state === "error") label = st.error || "Error";
+  else if (st.state === "playing") label = st.paused ? "Paused" : "Playing";
+  $("status").textContent = label;
+  const art = t.thumb ? '<img src="' + esc(t.thumb) + '" alt="' + esc((t.title || "Song") + " artwork") + '">' : '<div class="art-placeholder" aria-label="No cover artwork">♫</div>';
+  if ($("disc").innerHTML !== art) $("disc").innerHTML = art;
+  $("disc").classList.remove("spin");
+  updateSongWave(t, playing, st.state === "loading");
+  $("playBtn").textContent = (playing || st.state === "loading") ? "❚❚" : "▶";
+  $("shuffleBtn").classList.toggle("on", !!st.shuffle);
+  $("repeatBtn").classList.toggle("on", !!st.repeat);
+  if (!seeking) {
+    const pos = st.position || 0, dur = st.duration || 0;
+    paintProgress(dur ? Math.min(1, pos / dur) : 0, pos);
+    $("dur").textContent = fmt(dur);
+  }
+  const sig = `${queueItems().length}:${st.index}:${st.state}:${liked.length}:${t.title || ""}`;
+  if (sig !== queueSig) { queueSig = sig; renderQueue(); }
+}
+function renderQueue() {
+  const q = queueItems();
+  $("queue").innerHTML = q.length
+    ? q.map((item, i) => row(item, "queue", i, { active: i === st.index })).join("")
+    : '<div class="muted">Nothing queued yet.</div>';
+}
+function renderSearch() {
+  $("resultsPanel").hidden = !lastResults.length && !$("results").dataset.busy;
+  $("results").innerHTML = lastResults.map((r, i) => row(r, "search", i)).join("");
+}
+function renderLiked() {
+  $("likedCount").textContent = liked.length ? `${liked.length} songs` : "";
+  $("likedBox").innerHTML = liked.length
+    ? liked.map((t, i) => row(t, "liked", i, { add: false })).join("")
+    : '<div class="muted">No liked songs yet. Tap ♡ on any song.</div>';
+}
+function renderAll() {
+  queueSig = ""; renderQueue(); renderSearch(); renderLiked(); renderAlbums(); renderProfileHeader(); renderOfflinePage();
+  if (!$("sheet").hidden) renderSheet();
+}
+function setView(name) {
+  document.querySelectorAll(".view").forEach(v => v.classList.toggle("active", v.id === "view-" + name));
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t.dataset.tab === name));
+  if (name === "liked") renderLiked();
+  if (name === "recent") renderRecentPage();
+  if (name === "albums") renderAlbums();
+  $("screen").scrollTo({top: 0});
+}
+async function refresh() {
+  try { st = await fetch("/api/status").then(r => r.json()); render(); } catch (e) {}
+}
+
+/* search */
+async function search() {
+  const q = $("q").value.trim();
+  if (!q) return;
+  searchHistory=[q,...searchHistory.filter(x=>x!==q)].slice(0,30);LS.set("snuffy.searchHistory",searchHistory);
+  $("resultsPanel").hidden = false;
+  $("results").dataset.busy = "1";
+  $("results").innerHTML = '<div class="muted">Searching…</div>';
+  try {
+    const r = await fetch("/api/search?q=" + encodeURIComponent(q)).then(r => r.json());
+    lastResults = r.results || [];
+  } catch (e) { lastResults = []; }
+  delete $("results").dataset.busy;
+  renderSearch();
+  if (!lastResults.length) $("results").innerHTML = '<div class="muted">No results.</div>';
+}
+
+/* events */
+document.addEventListener("click", e => {
+  const page = e.target.closest("[data-page]");
+  if (page) return openPage(page.dataset.page);
+  const tab = e.target.closest("[data-tab]");
+  if (tab) return setView(tab.dataset.tab);
+  const b = e.target.closest("[data-act]");
+  if (!b) return;
+  const act = b.dataset.act;
+  const list = b.dataset.list;
+  const i = Number(b.dataset.i);
+  const items = list ? getList(list) : null;
+  switch (act) {
+    case "ctrl":        control(b.dataset.c); break;
+    case "pickfile":    openFilePicker(); break;
+    case "likenow":     toggleLike(currentItem()); break;
+    case "addnow":      { const ci = currentItem(); if (ci) openSheet(ci); break; }
+    case "play":        playList(items, i); openPlayer(); break;
+    case "like":        toggleLike(items[i]); break;
+    case "addalbum":    openSheet(items[i]); break;
+    case "saveofflineSheet": { const item = sheetItem; if (item) saveOfflineFromItem(item); break; }
+    case "pick":        pickAlbum(b.dataset.id); break;
+    case "closesheet":  closeSheet(); break;
+    case "createalbum": createAlbumFromPage(); break;
+    case "openalbum":   openAlbumId = b.dataset.id; renderAlbums(); break;
+    case "backalbum":   openAlbumId = null; renderAlbums(); break;
+    case "sharealbum": shareAlbum(); break; case "rmoffline": removeOfflineTrack(i); break; case "delalbum":    deleteAlbum(); break;
+    case "rmtrack":     removeTrack(i); break;
+    case "saveprofile": saveProfile(); break;
+    case "settingTheme": toggleTheme(); break;
+    case "settingShuffle": control("shuffle"); break;
+    case "settingRepeat": control("repeat"); break;
+    case "clearOffline": if(confirm("Permanently remove all audio files saved inside SpotifX on this device?")){(async()=>{for(const t of offlineTracks){if(t.uri&&t.uri.startsWith("blob:"))URL.revokeObjectURL(t.uri);}try{await clearOfflineBlobs();}catch(_){}if(window.AndroidBridge&&typeof AndroidBridge.clearOffline==="function")AndroidBridge.clearOffline();offlineTracks=[];saveAll();renderOfflinePage();renderAll();settingMessage("Offline audio files removed from this device.");})();} break;
+    case "backupExport": exportLibraryBackup(); break;
+    case "clearRecent": if(confirm("Clear recently played history?")){recentTracks=[];LS.set("snuffy.recent",recentTracks);renderRecentPage();settingMessage("Listening history cleared.");} break;
+    case "clearSearchHistory": searchHistory=[];LS.set("snuffy.searchHistory",searchHistory);settingMessage("Search history cleared."); break;
+    case "backupImport": $("backupInput").click(); break;
+    case "clearQueue": currentQueue=[]; saveAll(); post("/api/queue",{items:[],index:0}); renderQueue(); settingMessage("Queue cleared."); break;
+    case "clearLibrary": if(confirm("Clear all liked songs and albums from this device?")){albums=[];liked=[];saveAll();renderAll();settingMessage("Library cleared.");} break;
+    case "playall": {
+      let l = [...getList(list)];
+      if (b.dataset.shuffle) l.sort(() => Math.random() - 0.5);
+      playList(l, 0); break;
+    }
+  }
+});
+
+/* date field: digits only, slashes added automatically */
+document.addEventListener("input", e => {
+  if (e.target.id !== "pfDobText") return;
+  e.target.value = maskDob(digitsOnly(e.target.value));
+  syncCalendar();
+});
+document.addEventListener("keydown", e => {
+  if (e.target.id !== "pfDobText" || e.key !== "Backspace") return;
+  e.preventDefault();
+  e.target.value = maskDob(digitsOnly(e.target.value).slice(0, -1));
+  syncCalendar();
+});
+document.addEventListener("change", e => {
+  if (e.target.id === "pfDobPick" && e.target.value) {
+    const [y, m, d] = e.target.value.split("-");
+    $("pfDobText").value = `${d}/${m}/${y}`;
+  }
+
+  if (e.target.id === "qualitySetting") {
+    LS.set("snuffy.quality", e.target.value);
+    settingMessage("Stream preference saved. Actual quality depends on the audio source.");
+  }
+  if (e.target.id === "eqPreset") {
+    LS.set("snuffy.eqPreset", e.target.value);
+    if (window.AndroidBridge && typeof AndroidBridge.setEqualizerPreset === "function") AndroidBridge.setEqualizerPreset(e.target.value);
+    settingMessage("Equalizer preset applied on this Android device.");
+  }
+  if (e.target.id === "eqEnabled") {
+    LS.set("snuffy.eqEnabled", !!e.target.checked);
+    if (window.AndroidBridge && typeof AndroidBridge.setEqualizerEnabled === "function") AndroidBridge.setEqualizerEnabled(!!e.target.checked);
+    settingMessage(e.target.checked ? "Equalizer enabled." : "Equalizer disabled.");
+  }
+});
+
+$("backupInput").addEventListener("change",e=>{const f=e.target.files&&e.target.files[0];if(f)importLibraryBackup(f);e.target.value="";});
+$("themeBtn").onclick = toggleTheme;
+$("setBtn").onclick = openDrawer;
+$("scrim").onclick = closeDrawer;
+$("pageBack").onclick = closePage;
+$("albumName").addEventListener("keydown", e => { if (e.key === "Enter") createAlbumFromPage(); });
+$("sheet").addEventListener("click", e => { if (e.target.id === "sheet") closeSheet(); });
+$("goBtn").onclick = search;
+$("q").addEventListener("keydown", e => { if (e.key === "Enter") search(); });
+
+applyTheme();
+renderAll();
+restoreOfflineBlobUrls().catch(() => { renderAll(); });
+refresh();
+setInterval(refresh, 1000);
+</script>
+</body>
+</html>
